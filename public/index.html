@@ -39,13 +39,7 @@
         <h1>Personal Budget</h1>
         <h2>A personal-budget management app</h2>
         <!-- This is an A11y Change -->
-        <img
-          src="bg.png"
-          class="center"
-          alt="A picture of mobile and a desktop with personal budget metrics on the screens"
-          width="300px"
-          height="200px"
-        />
+        <img/>
       </div>
     </header>
     <!--This is a Semantic HTML Change -->
@@ -107,21 +101,17 @@
           </div>
 
           <div class="text-box">
-            <h2>Chart One</h2>
-
+            <h2>Using ChartJS</h2>
             <p>
-              <canvas id="myChartOne" width="400" height="400"></canvas>
+              <canvas id="myChart" width="400" height="400"></canvas>
             </p>
           </div>
 
-          <div class="text-box">
-            <h2>Chart Two</h2>
-            <p>
-              <canvas id="myChartTwo" width="400" height="400"></canvas>
-            </p>
+          <div id="chartD3">  
+            <h1>Using D3JS</h1>
           </div>
-        </div>
-      </div>
+
+
     </main>
 
     <!--This is a Semantic HTML Change -->
@@ -143,78 +133,179 @@
       integrity="sha512-s+xg36jbIujB2S2VKfpGmlC3T5V2TF3lY48DX7u2r9XzGzgPsa6wTpOQA7J9iffvdeBN0q9tKzRxVxw1JviZPg=="
       crossorigin="anonymous"
     ></script>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
     <script>
-      var dataSourceOne = {
-        datasets: [
-          {
-            data: [],
-            backgroundColor: ["#FF7F50", "#FFB6C1", "#87CEFA"],
-          },
-        ],
-
-        // These labels appear in the legend and in the tooltips when hovering different arcs
-        labels: [],
-      };
-
-      var dataSourceTwo = {
-        datasets: [
-          {
-            data: [],
-            backgroundColor: [
-              "#FF7F50",
-              "#FFB6C1",
-              "#87CEFA",
-              "#008080",
-              "#808080",
-              "#8FBC8F",
-              "#D3D3D3",
+      
+      var dataSource={
+            datasets:[
+                {
+                    data: [],
+                    backgroundColor:[]
+                }
             ],
-          },
-        ],
-
-        // These labels appear in the legend and in the tooltips when hovering different arcs
-        labels: [],
-      };
-
-      function createChartOne() {
-        var ctx = document.getElementById("myChartOne").getContext("2d");
-        var myPieChart = new Chart(ctx, {
-          type: "pie",
-          data: dataSourceOne,
+            labels:[]
+        };
+        function getBudget(){
+            axios.get('http://localhost:3000/budget')
+            .then(function(res){
+                console.log(res);
+                var k='#';
+                for(var i=0;i<res.data.length;i++){
+                    dataSource.datasets[0].data[i]=res.data[i].budget;
+                    dataSource.datasets[0].backgroundColor[i]= k.concat(res.data[i].color);
+                    dataSource.labels[i]=res.data[i].title;
+                }
+                createChartJS();
+                create(chartD3JS());
+            })
+        }
+        function createChartJS(){
+            var ctx=document.getElementById("myChart").getContext("2d");
+            var myPieChart=new Chart(ctx,{
+                type:'pie',
+                data:dataSource
+            });
+        }
+        getBudget();
+               
+        var svg = d3.select('#chartD3')
+        .append("svg")
+        .append("g")
+        
+        svg.append("g")
+        .attr("class", "slices");
+        svg.append("g")
+            .attr("class", "labels");
+        svg.append("g")
+            .attr("class", "lines");
+        
+        var width = 960,
+        height = 450,
+        radius = Math.min(width, height) / 2;
+        
+        var pie = d3.layout.pie()
+        .sort(null)
+        .value(function(d) {
+            return d.value;
         });
-      }
-
-      function getBudgetOne() {
-        axios.get("http://localhost:3000/budgetOne").then(function (res) {
-          console.log(res);
-          for (let i = 0; i < res.data.myBudget.length; i++) {
-            dataSourceOne.datasets[0].data[i] = res.data.myBudget[i].budget;
-            dataSourceOne.labels[i] = res.data.myBudget[i].title;
+        var arc = d3.svg.arc()
+        .outerRadius(radius * 0.8)
+        .innerRadius(radius * 0.4);
+    
+        var outerArc = d3.svg.arc()
+        .innerRadius(radius * 0.9)
+        .outerRadius(radius * 0.9);
+        
+        svg.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+    
+        var key = function(d){ return d.data.label; };
+    
+        var color = d3.scale.ordinal()
+          .range(dataSource.datasets[0].backgroundColor);
+          function  chartD3JS(){
+            var labels=dataSource.labels;
+            var values=dataSource.datasets[0].data;
+            console.log(dataSource.labels);
+            console.log(dataSource.datasets[0].data);
+            var k=-1;
+            var mydata=labels.map(function(label){
+              k++;
+              return { label: label , value: values[k] }
+            });
+            console.log(mydata);
+            return mydata;
           }
-          createChartOne();
-        });
-      }
-      getBudgetOne();
+        //console.log(dataSource);
+        //change(mydata);
+        function create(data){
+            /* ------- PIE SLICES -------*/
+            var slice = svg.select(".slices").selectAll('#pathslice')
+                .data(pie(data), key);
+        
+            slice.enter()
+                .insert("path")
+                .style("fill", function(d) { return color(d.data.label); })
+                .attr("class", "slice");
+        
+            slice		
+                .transition().duration(1000)
+                .attrTween("d", function(d) {
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function(t) {
+                        return arc(interpolate(t));
+                    };
+                })
+        
+            slice.exit()
+                .remove();
+            /* ------- TEXT LABELS -------*/
+            var text = svg.select(".labels").selectAll("text")
+            .data(pie(data), key);
+        
+            text.enter()
+                .append("text")
+                .attr("dy", ".35em")
+                .text(function(d) {
+                    return d.data.label;
+                });
+            
+            function midAngle(d){
+                return d.startAngle + (d.endAngle - d.startAngle)/2;
+            }
+        
+            text.transition().duration(1000)
+                .attrTween("transform", function(d) {
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function(t) {
+                        var d2 = interpolate(t);
+                        var pos = outerArc.centroid(d2);
+                        pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+                        return "translate("+ pos +")";
+                    };
+                })
+                .styleTween("text-anchor", function(d){
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function(t) {
+                        var d2 = interpolate(t);
+                        return midAngle(d2) < Math.PI ? "start":"end";
+                    };
+                });
+        
+            text.exit()
+                .remove();
+            
+            /* ------- SLICE TO TEXT POLYLINES -------*/
+        
+            var polyline = svg.select(".lines").selectAll('polyline')
+                .data(pie(data), key);
+            
+            polyline.enter()
+                .append("polyline");
+        
+            polyline.transition().duration(1000)
+                .attrTween("points", function(d){
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function(t) {
+                        var d2 = interpolate(t);
+                        var pos = outerArc.centroid(d2);
+                        pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+                        return [arc.centroid(d2), outerArc.centroid(d2), pos];
+                    };			
+                });
+            
+            polyline.exit()
+                .remove();
+        };
 
-      function createChartTwo() {
-        var ctx = document.getElementById("myChartTwo").getContext("2d");
-        var myPieChart = new Chart(ctx, {
-          type: "pie",
-          data: dataSourceTwo,
-        });
-      }
 
-      function getBudgetTwo() {
-        axios.get("http://localhost:3000/budgetTwo").then(function (res) {
-          console.log(res);
-          for (let i = 0; i < res.data.myBudget.length; i++) {
-            dataSourceTwo.datasets[0].data[i] = res.data.myBudget[i].budget;
-            dataSourceTwo.labels[i] = res.data.myBudget[i].title;
-          }
-          createChartTwo();
-        });
-      }
-      getBudgetTwo();
     </script>
   </body>
 </html>
