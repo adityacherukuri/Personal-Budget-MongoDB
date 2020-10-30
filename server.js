@@ -22,14 +22,13 @@ app.post("/mybudget",upload.array(), (request, response)=> {
       "budget": request.body.budget,
       "color":request.body.color
       };
-  //response.send('Result : '+newData.title);
+  
   mongoose.connect(url,{ useNewUrlParser: true, useUnifiedTopology: true })
       .then(()=>{
           console.log("Connected to the database...")
-           // Insert operation
+           // Insertion
           budgetModel.insertMany(newData)
               .then((data)=>{
-                  //console.log(data)
                   response.send("Data inserted successfully into database");
                   mongoose.connection.close()
               })
@@ -45,7 +44,6 @@ app.post("/mybudget",upload.array(), (request, response)=> {
 mongoose.connect(url,{ useNewUrlParser: true, useUnifiedTopology: true })
       .then(()=>{
           console.log("Connected to database")
-         // List all entries
           budgetModel.find({})
                   .then((data)=>{
                       app.get('/budget',(req,res)=>{
