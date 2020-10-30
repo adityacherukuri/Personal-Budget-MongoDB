@@ -1,6 +1,6 @@
-const mongoose=require('mongoose')
+const mongoose = require('mongoose')
 
-const budgetSchema= new mongoose.Schema({
+const budgetSchema = new mongoose.Schema({
     title: {
         type:String,
         required:true,
@@ -20,6 +20,6 @@ const budgetSchema= new mongoose.Schema({
         uppercase:true,
         minlength: 6
     }
-},{collection: 'budgets'})
+},{collection: 'budgets'});
 
 module.exports = mongoose.model('budgets',budgetSchema);
